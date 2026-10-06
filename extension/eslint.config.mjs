@@ -3,7 +3,7 @@ import parser from "@typescript-eslint/parser";
 
 export default [
   {
-    files: ["src/**/*.ts", "webview/**/*.ts"],
+    files: ["src/**/*.ts", "webview/**/*.ts", "dev/**/*.ts"],
     languageOptions: {
       parser,
       parserOptions: { ecmaVersion: 2022, sourceType: "module" },

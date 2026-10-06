@@ -6,10 +6,13 @@
  * user's undo history rather than writing the file behind their back.
  */
 
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import * as vscode from "vscode";
 
 import { analyze, conflictForUri } from "../conflicts";
 import { stageResolved } from "../git/stages";
+import { regenerateCommand } from "../merge/lockfile";
 import {
   countConflicts,
   type MergeDocument,
@@ -170,6 +173,57 @@ export class ConflictEditorProvider implements vscode.CustomTextEditorProvider {
       refreshDerived();
     };
 
+    /**
+     * Rebuilds a lockfile with the package manager. This runs a command in
+     * the user's repository, so it always states exactly what it will run and
+     * waits for confirmation — never on its own initiative.
+     */
+    const regenerate = async (): Promise<void> => {
+      if (!session) {
+        return;
+      }
+      const { command, args } = regenerateCommand(session.relativePath);
+      const line = `${command} ${args.join(" ")}`;
+
+      const choice = await vscode.window.showWarningMessage(
+        `Regenerate ${session.relativePath}?`,
+        {
+          modal: true,
+          detail:
+            `This runs the following command in ${session.repoRoot}:\n\n    ${line}\n\n` +
+            "It rewrites the lockfile from package.json and may change many " +
+            "entries. Resolve package.json first if it is also conflicted.",
+        },
+        "Run",
+      );
+      if (choice !== "Run") {
+        return;
+      }
+
+      // Take a side first: npm needs a parseable lockfile on disk.
+      session.doc.root[0].resolution = { kind: "side", side: "ours" };
+      await apply(false);
+
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Running ${line}…` },
+        async () => {
+          try {
+            await runCommand(command, args, session!.repoRoot);
+            await stageResolved(session!.repoRoot, session!.relativePath);
+            this.onResolved();
+            void vscode.window.showInformationMessage(
+              `Regenerated and staged ${session!.relativePath}.`,
+            );
+            post({ type: "applied", staged: true });
+          } catch (error) {
+            void vscode.window.showErrorMessage(
+              `${line} failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        },
+      );
+    };
+
     panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
       switch (message.type) {
         case "ready":
@@ -198,6 +252,9 @@ export class ConflictEditorProvider implements vscode.CustomTextEditorProvider {
             document.uri,
             "default",
           );
+          return;
+        case "regenerateLockfile":
+          await regenerate();
           return;
       }
     });
@@ -228,6 +285,12 @@ export class ConflictEditorProvider implements vscode.CustomTextEditorProvider {
 </body>
 </html>`;
   }
+}
+
+const exec = promisify(execFile);
+
+async function runCommand(command: string, args: string[], cwd: string): Promise<void> {
+  await exec(command, args, { cwd, maxBuffer: 8 * 1024 * 1024 });
 }
 
 function findNode(nodes: MergeNode[], id: string): MergeNode | undefined {

@@ -330,3 +330,25 @@ kbd {
   padding: 0 4px;
   font-size: 0.9em;
 }
+
+/* ---------- lockfile card ---------- */
+
+.card {
+  margin: 16px 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, transparent);
+  max-width: 640px;
+}
+
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 1em;
+}
+
+.card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}

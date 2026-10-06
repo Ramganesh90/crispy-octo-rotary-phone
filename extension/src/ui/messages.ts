@@ -26,7 +26,9 @@ export type WebviewMessage =
   | { type: "setResolution"; nodeId: string; resolution: Resolution }
   | { type: "setAll"; side: Side }
   | { type: "apply"; stage: boolean }
-  | { type: "openTextEditor" };
+  | { type: "openTextEditor" }
+  /** Lockfiles only: rebuild the file with the package manager. */
+  | { type: "regenerateLockfile" };
 
 /** The subset of the webview API the resolver uses. */
 export interface VsCodeApi {

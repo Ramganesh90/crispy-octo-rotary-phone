@@ -6,8 +6,7 @@
  * genuine engine-to-UI round trip rather than a mock.
  */
 
-import { createJsonEngine } from "../src/merge/json";
-import { createLinesEngine } from "../src/merge/lines";
+import { createEngine } from "../src/merge/index";
 import { countConflicts, type MergeNode, walk } from "../src/merge/types";
 import type { HostMessage, WebviewMessage } from "../src/ui/messages";
 
@@ -56,6 +55,28 @@ const FIXTURES = {
     ours: "node_modules/\n*.log\ndist/\ncoverage/\n",
     theirs: "node_modules/\n.next/\n*.log.bak\n",
   },
+  yaml: {
+    path: ".github/workflows/ci.yml",
+    base: "name: ci\non: push\njobs:\n  build:\n    runs-on: ubuntu-20.04\n    node: 18\n",
+    ours:
+      "# continuous integration\nname: ci\non: push\njobs:\n  build:\n    runs-on: ubuntu-22.04\n    node: 18\n    cache: npm\n",
+    theirs:
+      "name: ci\non: push\njobs:\n  build:\n    runs-on: ubuntu-24.04\n    node: 20\n",
+  },
+  lockfile: {
+    path: "package-lock.json",
+    base: JSON.stringify({ name: "acme-web", version: "2.3.0", packages: { "": {} } }),
+    ours: JSON.stringify({
+      name: "acme-web",
+      version: "2.4.0",
+      packages: { "": {}, "node_modules/vite": {}, "node_modules/react": {} },
+    }),
+    theirs: JSON.stringify({
+      name: "acme-web",
+      version: "3.0.0",
+      packages: { "": {}, "node_modules/zod": {} },
+    }),
+  },
 } as const;
 
 type FixtureName = keyof typeof FIXTURES;
@@ -63,7 +84,7 @@ type FixtureName = keyof typeof FIXTURES;
 const which = (new URLSearchParams(location.search).get("fixture") ??
   "json") as FixtureName;
 const fixture = FIXTURES[which] ?? FIXTURES.json;
-const engine = which === "lines" ? createLinesEngine() : createJsonEngine();
+const engine = createEngine(which in FIXTURES ? which : "json");
 
 const doc = engine.analyze(fixture.base, fixture.ours, fixture.theirs);
 

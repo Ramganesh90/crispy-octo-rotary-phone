@@ -2,7 +2,9 @@
 
 import { createJsonEngine } from "./json";
 import { createLinesEngine } from "./lines";
+import { createLockfileEngine } from "./lockfile";
 import type { MergeEngine, MergeFormat } from "./types";
+import { createYamlEngine } from "./yaml";
 
 const LOCKFILES = new Set(["package-lock.json", "npm-shrinkwrap.json"]);
 
@@ -62,9 +64,9 @@ export function createEngine(format: MergeFormat): MergeEngine {
     case "lines":
       return createLinesEngine();
     case "yaml":
+      return createYamlEngine();
     case "lockfile":
-      // Added in a later phase; until then these fall back to a text merge.
-      throw new Error(`No engine registered for format '${format}' yet`);
+      return createLockfileEngine();
   }
 }
 

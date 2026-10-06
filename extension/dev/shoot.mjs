@@ -157,6 +157,62 @@ check(
 await page.screenshot({ path: join(outDir, "resolver-lines.png") });
 await page.close();
 
+// ---------------------------------------------------------------- yaml fixture
+
+console.log("yaml fixture:");
+page = await open("yaml", "dark");
+const yamlBadge = (await page.textContent(".toolbar .badge")) ?? "";
+check("yaml conflicts are reported", /conflict/.test(yamlBadge), yamlBadge);
+const yamlPreview = (await page.textContent(".preview pre")) ?? "";
+check("comments survive the yaml merge", yamlPreview.includes("# continuous integration"));
+check("our clean addition is kept", yamlPreview.includes("cache: npm"));
+check("their clean change is applied", /node: 20/.test(yamlPreview), yamlPreview);
+await page.screenshot({ path: join(outDir, "resolver-yaml.png") });
+await page.close();
+
+// ------------------------------------------------------------ lockfile fixture
+
+console.log("lockfile fixture:");
+page = await open("lockfile", "dark");
+check("a lockfile gets a card, not a tree", (await page.locator(".card").count()) === 1);
+check(
+  "the card offers keep-ours and keep-theirs",
+  (await page.locator(".card .choice").count()) === 2,
+);
+check(
+  "the card summarises each side",
+  ((await page.textContent(".card")) ?? "").includes("3 packages"),
+  (await page.textContent(".card")) ?? "",
+);
+check(
+  "bulk actions are hidden for a single-decision lockfile",
+  (await page.locator(".toolbar button").count()) === 0,
+);
+check(
+  "the keyboard hint is hidden for a lockfile",
+  (await page.locator(".hint").count()) === 0,
+);
+check(
+  "regenerate is offered",
+  (await page.locator(".footer button", { hasText: "Regenerate" }).count()) === 1,
+);
+check(
+  "apply is blocked until a side is kept",
+  await page.locator(".footer button.primary").isDisabled(),
+);
+await page.locator(".card .choice").nth(1).click();
+await page.waitForTimeout(100);
+check(
+  "keeping a side unblocks apply",
+  await page.locator(".footer button.primary").isEnabled(),
+);
+check(
+  "the preview shows the kept side verbatim",
+  ((await page.textContent(".preview pre")) ?? "").includes('"3.0.0"'),
+);
+await page.screenshot({ path: join(outDir, "resolver-lockfile.png") });
+await page.close();
+
 await browser.close();
 
 console.log(

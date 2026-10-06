@@ -295,6 +295,39 @@ function renderNode(node: MergeNode, depth: number, into: HTMLElement): void {
   }
 }
 
+/**
+ * A lockfile gets one card instead of a tree: merging it key by key produces
+ * a tree that may not install, so the real choice is which side to keep and
+ * whether to regenerate.
+ */
+function renderLockfileCard(node: MergeNode): HTMLElement {
+  const card = element("div", "card");
+  card.append(
+    element("h3", undefined, "This is a generated lockfile"),
+    element(
+      "p",
+      undefined,
+      "Merging a lockfile entry by entry can produce a dependency tree that " +
+        "does not install. Keep one side, then regenerate it from package.json.",
+    ),
+  );
+
+  const choices = element("div", "choices");
+  for (const side of ["ours", "theirs"] as const) {
+    const selected = node.resolution.kind === "side" && node.resolution.side === side;
+    const button = element("button", "choice");
+    button.setAttribute("aria-pressed", String(selected));
+    button.append(
+      element("span", "side", side === "ours" ? "Keep ours" : "Keep theirs"),
+      element("span", "val", node.sides[side].display),
+    );
+    button.addEventListener("click", () => choose(node, side));
+    choices.append(button);
+  }
+  card.append(choices);
+  return card;
+}
+
 function renderToolbar(): HTMLElement {
   const bar = element("div", "toolbar");
   const doc = state!.doc;
@@ -313,7 +346,9 @@ function renderToolbar(): HTMLElement {
     bar.append(element("span", "badge", "merges cleanly"));
   }
 
-  if (doc.conflictCount > 0) {
+  // Bulk actions and the filter only make sense over a tree of decisions; a
+  // lockfile is a single choice.
+  if (doc.conflictCount > 0 && doc.format !== "lockfile") {
     const allOurs = element("button", undefined, "All ours");
     allOurs.addEventListener("click", () => post({ type: "setAll", side: "ours" }));
     const allTheirs = element("button", undefined, "All theirs");
@@ -359,6 +394,15 @@ function renderFooter(): HTMLElement {
   const text = element("button", undefined, "Open as text");
   text.addEventListener("click", () => post({ type: "openTextEditor" }));
 
+  if (state!.doc.format === "lockfile") {
+    const regenerate = element("button", undefined, "Regenerate with npm");
+    regenerate.title =
+      "Rebuild the lockfile from package.json instead of merging it. " +
+      "You will be asked to confirm the command first.";
+    regenerate.addEventListener("click", () => post({ type: "regenerateLockfile" }));
+    footer.append(regenerate);
+  }
+
   const applyOnly = element("button", undefined, "Apply");
   applyOnly.disabled = unresolved > 0;
   applyOnly.title = "Write the merged file without staging it";
@@ -394,8 +438,12 @@ function render(): void {
 
   const tree = element("div", "tree");
   tree.setAttribute("role", "tree");
-  for (const node of state.doc.root) {
-    renderNode(node, 0, tree);
+  if (state.doc.format === "lockfile") {
+    tree.append(renderLockfileCard(state.doc.root[0]));
+  } else {
+    for (const node of state.doc.root) {
+      renderNode(node, 0, tree);
+    }
   }
   if (tree.childElementCount === 0) {
     tree.append(
@@ -410,7 +458,7 @@ function render(): void {
   }
   root.append(tree);
 
-  if (state.doc.conflictCount > 0) {
+  if (state.doc.conflictCount > 0 && state.doc.format !== "lockfile") {
     root.append(
       (() => {
         const hint = element("div", "hint");
