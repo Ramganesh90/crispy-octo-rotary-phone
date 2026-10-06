@@ -384,7 +384,9 @@ function renderFooter(): HTMLElement {
       state!.applied
         ? "Applied."
         : unresolved > 0
-          ? `${unresolved} conflict${unresolved === 1 ? "" : "s"} still need a decision`
+          ? unresolved === 1
+            ? "1 conflict still needs a decision"
+            : `${unresolved} conflicts still need a decision`
           : doc.conflictCount > 0
             ? "All conflicts resolved"
             : "Nothing to decide — review and apply",
