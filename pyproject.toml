@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "git-merge-driver"
+dynamic = ["version"]
+description = "Custom merge driver for git with pluggable strategies (JSON, line sets, ours/theirs)"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+git-merge-driver = "git_merge_driver.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "git_merge_driver.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["git_merge_driver*"]
