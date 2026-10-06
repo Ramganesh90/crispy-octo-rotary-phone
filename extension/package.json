@@ -171,7 +171,7 @@
     "lint": "eslint src webview",
     "typecheck": "tsc -p . --noEmit",
     "test:unit": "node --test out/src/test/suite/*.unit.test.js",
-    "test:integration": "node out/test/runIntegration.js",
+    "test:integration": "npm run compile-tests && npm run build && node out/src/test/runIntegration.js",
     "test": "npm run compile-tests && npm run test:unit"
   },
   "dependencies": {

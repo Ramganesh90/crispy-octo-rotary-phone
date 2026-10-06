@@ -42,6 +42,27 @@ jobs:
           name: vsix
           path: extension/structural-merge-resolver.vsix
 
+  integration:
+    name: VS Code integration
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+      - name: Configure git for the scratch repositories
+        run: |
+          git config --global user.email "test@example.com"
+          git config --global user.name "Test"
+      # VS Code needs a display even headless, and downloads itself on first run.
+      - run: xvfb-run -a npm run test:integration
+
   ui:
     name: Resolver UI
     runs-on: ubuntu-latest
