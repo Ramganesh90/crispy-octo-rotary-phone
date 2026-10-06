@@ -1,7 +1,7 @@
 # Structural Merge Resolver
 
-Resolve merge conflicts in JSON, YAML, TOML, XML and list files **key by key**
-instead of line by line.
+Resolve merge conflicts in JSON, YAML, TOML, XML, JavaScript and list files
+**structurally** instead of line by line.
 
 When two branches each add a dependency to `package.json`, git sees two edits on
 neighbouring lines and gives up. The keys never actually clashed. This extension
@@ -41,8 +41,36 @@ genuinely differ, and asks you only about those.
 | TOML | `pyproject.toml`, `Cargo.toml` | Key-by-key, editing only the lines whose value changed. Arrays of tables and multi-line values fall back to a text merge rather than risk rewriting them wrongly. |
 | XML | `pom.xml`, `*.csproj`, `*.props` | Replaces only the character spans that changed, so comments, the declaration, indentation and attribute order survive. Repeated siblings are matched by `artifactId`/`id`/`name`, so a dependency list merges by name rather than position. Mixed content falls back. |
 | `.env` | `.env`, `.env.*` | Merged as `KEY=value` pairs rather than lines. |
+| JavaScript / TypeScript | `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.ts`, `*.tsx` | Two levels — see below. |
 | Line sets | `.gitignore`, `CODEOWNERS`, `.dockerignore`, … | Additions from both sides kept, removals from either side applied. Never conflicts. |
 | Lockfiles | `package-lock.json`, `npm-shrinkwrap.json` | Not merged entry by entry: independently merged entries can describe a tree that will not install. Keep one side, then regenerate. |
+
+### JavaScript, JSX and TypeScript
+
+Source code does not decompose into named values, so this works at two levels:
+
+1. **Top-level declarations** — imports, functions, classes, constants, exports
+   and types — are matched **by name**. Each branch adding a function, or
+   editing a different one, merges with nothing to decide. Imports from both
+   branches end up together.
+2. **Inside a declaration both branches touched**, a line-level three-way merge
+   runs over just that declaration, so two people editing different parts of the
+   same function still merge cleanly.
+
+The second level is the point. Without it, declaration-level matching would
+report a conflict for every shared function — making this *worse* than git for
+the most common case in real code. Only when the lines genuinely overlap does a
+decision reach you, and then the unit is one whole declaration shown as code,
+side by side, rather than a wall of markers.
+
+Edits on **adjacent lines** conflict, exactly as `git merge-file` conflicts on
+them: with no unchanged line between two changes, they cannot be told apart.
+Matching git is deliberate — this should never be worse than the merge you would
+otherwise have got.
+
+Nothing is reprinted: the output is your branch's text with individual
+declaration spans spliced, so formatting elsewhere is untouched. A file that
+does not parse falls back to a text merge.
 
 ### Arrays
 

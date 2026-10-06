@@ -130,5 +130,6 @@ test("detects formats by filename", () => {
   assert.equal(detectFormat(".gitignore"), "lines");
   assert.equal(detectFormat("CODEOWNERS"), "lines");
   assert.equal(detectFormat(".github/workflows/ci.yml"), "yaml");
-  assert.equal(detectFormat("src/app.ts"), null);
+  assert.equal(detectFormat("src/app.ts"), "js", "TypeScript is handled now");
+  assert.equal(detectFormat("src/app.css"), null);
 });

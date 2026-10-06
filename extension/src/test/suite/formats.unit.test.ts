@@ -13,7 +13,8 @@ test("detects the new formats by filename", () => {
   assert.equal(detectFormat("crates/core/Cargo.toml"), "toml");
   assert.equal(detectFormat(".env"), "dotenv");
   assert.equal(detectFormat(".env.production"), "dotenv");
-  assert.equal(detectFormat("environment.ts"), null);
+  assert.equal(detectFormat("environment.ts"), "js", "TypeScript is handled now");
+  assert.equal(detectFormat("styles.css"), null);
 });
 
 // --------------------------------------------------------------------- dotenv

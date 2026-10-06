@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+**JavaScript, JSX and TypeScript.** Top-level declarations are matched by name,
+so each branch adding or editing a different function merges with nothing to
+decide, and imports from both branches end up together. Where both branches
+touched the same declaration, a line-level merge runs inside it first — two
+people editing different parts of one function still merge cleanly. Only a
+genuine line overlap becomes a decision, and it is shown as code side by side.
+Matches `git merge-file` on adjacent-line edits rather than being more
+conservative than it.
+
+Code conflicts anywhere now render as code rather than escaped JSON strings.
+
 ## 0.2.0
 
 **Arrays merge properly.** Arrays of scalars (`tsconfig.include`,

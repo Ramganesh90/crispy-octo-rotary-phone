@@ -374,6 +374,44 @@ check(
 await page.screenshot({ path: join(outDir, "resolver-diff.png") });
 await page.close();
 
+// ------------------------------------------------------------- js/jsx fixture
+
+console.log("js fixture:");
+page = await open("js", "dark", 720);
+check(
+  "declarations each branch added merge with nothing to decide",
+  ((await page.textContent(".tree")) ?? "").includes("Sidebar") &&
+    ((await page.textContent(".tree")) ?? "").includes("Header"),
+);
+const jsPreview = (await page.textContent(".preview pre")) ?? "";
+check(
+  "imports from both branches end up together",
+  jsPreview.includes('from "react"') && jsPreview.includes('from "./theme"'),
+);
+check(
+  "imports are not separated by a stray blank line",
+  !/from "react";\n\n+import/.test(jsPreview),
+  JSON.stringify(jsPreview.slice(0, 120)),
+);
+check(
+  "a declaration both branches changed is a conflict",
+  ((await page.textContent(".toolbar .badge")) ?? "").includes("2 conflict"),
+);
+check(
+  "a code conflict shows the two versions as code, side by side",
+  (await page.locator(".diff-col").count()) === 2,
+);
+check(
+  "code is not rendered as an escaped JSON string",
+  !((await page.textContent(".diff")) ?? "").includes("\\n"),
+);
+check(
+  "the differing lines are the ones marked",
+  (await page.locator(".diff-line.only-ours, .diff-line.only-theirs").count()) >= 2,
+);
+await page.screenshot({ path: join(outDir, "resolver-js.png") });
+await page.close();
+
 await browser.close();
 
 console.log(

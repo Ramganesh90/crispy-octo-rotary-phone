@@ -1,8 +1,8 @@
 {
   "name": "structural-merge-resolver",
   "displayName": "Structural Merge Resolver",
-  "description": "Resolve merge conflicts in JSON, YAML, TOML, XML and list files key by key instead of line by line.",
-  "version": "0.2.0",
+  "description": "Resolve merge conflicts in JavaScript, JSON, YAML, TOML, XML and list files structurally instead of line by line.",
+  "version": "0.3.0",
   "publisher": "ramganesh90",
   "license": "MIT",
   "engines": {
@@ -16,11 +16,12 @@
     "merge",
     "conflict",
     "git",
+    "javascript",
+    "typescript",
     "json",
     "yaml",
     "toml",
     "xml",
-    "merge driver",
     "3-way merge"
   ],
   "main": "./dist/extension.js",
@@ -179,7 +180,9 @@
     "test": "npm run compile-tests && npm run test:unit"
   },
   "dependencies": {
+    "@babel/parser": "^7.29.9",
     "jsonc-parser": "^3.3.1",
+    "node-diff3": "^2.1.2",
     "saxes": "^6.0.0",
     "yaml": "^2.9.1"
   },

@@ -1,6 +1,7 @@
 /** Format detection and the engine registry. */
 
 import { createDotenvEngine } from "./dotenv";
+import { createJsEngine } from "./js";
 import { createJsonEngine } from "./json";
 import { createLinesEngine } from "./lines";
 import { createLockfileEngine } from "./lockfile";
@@ -67,6 +68,9 @@ export function detectFormat(path: string): MergeFormat | null {
   ) {
     return "xml";
   }
+  if (/\.(jsx?|mjs|cjs|tsx?|mts|cts)$/.test(lower)) {
+    return "js";
+  }
   // .env, .env.local, .env.production — but not .env.example's siblings being
   // treated differently, since they all have the same shape.
   if (name === ".env" || name.startsWith(".env.")) {
@@ -92,6 +96,8 @@ export function createEngine(format: MergeFormat): MergeEngine {
       return createTomlEngine();
     case "xml":
       return createXmlEngine();
+    case "js":
+      return createJsEngine();
   }
 }
 

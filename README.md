@@ -88,8 +88,8 @@ tree of decisions — keys that merged cleanly marked as such, keys both branche
 changed offered as a choice between ours, theirs, base, or a value you type,
 with a live preview of the file that will be written.
 
-It handles JSON/JSONC, YAML, TOML, XML, `.env`, line-set files such as
-`.gitignore`, and lockfiles (which it declines to merge entry by entry, for good
+It handles JavaScript/JSX/TypeScript, JSON/JSONC, YAML, TOML, XML, `.env`,
+line-set files such as `.gitignore`, and lockfiles (which it declines to merge entry by entry, for good
 reason). Arrays merge as sets or by an identifying field rather than
 all-or-nothing, and version conflicts come with the newer side marked
 *Recommended*. It is self-contained TypeScript — installing it does not require

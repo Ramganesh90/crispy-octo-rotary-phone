@@ -236,14 +236,27 @@ function renderWholeChoice(node: MergeNode): HTMLElement {
 
 /** True when a one-line summary like "{3 keys}" hides what actually differs. */
 function isStructured(node: MergeNode): boolean {
-  return [node.sides.ours, node.sides.theirs].some(
-    (side) => side.present && typeof side.value === "object" && side.value !== null,
-  );
+  return [node.sides.ours, node.sides.theirs].some((side) => {
+    if (!side.present) {
+      return false;
+    }
+    // Objects and arrays, and any multi-line text — a source declaration is
+    // the latter, and a signature line alone says nothing about what changed.
+    if (typeof side.value === "string") {
+      return side.value.includes("\n");
+    }
+    return typeof side.value === "object" && side.value !== null;
+  });
 }
 
 function pretty(side: MergeNode["sides"]["ours"]): string[] {
   if (!side.present) {
     return ["(removed)"];
+  }
+  // Source text is shown as itself; escaping it into a JSON string would make
+  // code unreadable.
+  if (typeof side.value === "string") {
+    return side.value.split("\n");
   }
   return JSON.stringify(side.value, null, 2).split("\n");
 }
