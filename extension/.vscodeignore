@@ -14,3 +14,4 @@ eslint.config.mjs
 dist/preview-host.js
 dist/preview-host.js.map
 dist/*.map
+media/icon.svg

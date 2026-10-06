@@ -1,8 +1,8 @@
 {
   "name": "structural-merge-resolver",
   "displayName": "Structural Merge Resolver",
-  "description": "Resolve merge conflicts in JSON, YAML and list files key by key instead of line by line.",
-  "version": "0.1.0",
+  "description": "Resolve merge conflicts in JSON, YAML, TOML, XML and list files key by key instead of line by line.",
+  "version": "0.2.0",
   "publisher": "ramganesh90",
   "license": "MIT",
   "engines": {
@@ -17,7 +17,11 @@
     "conflict",
     "git",
     "json",
-    "yaml"
+    "yaml",
+    "toml",
+    "xml",
+    "merge driver",
+    "3-way merge"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -193,5 +197,14 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Ramganesh90/crispy-octo-rotary-phone.git"
-  }
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1f2430",
+    "theme": "dark"
+  },
+  "bugs": {
+    "url": "https://github.com/Ramganesh90/crispy-octo-rotary-phone/issues"
+  },
+  "homepage": "https://github.com/Ramganesh90/crispy-octo-rotary-phone/tree/main/extension"
 }

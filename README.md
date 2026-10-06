@@ -4,7 +4,7 @@ Merging structured files key by key instead of line by line, in two forms:
 
 | | What it is | Use it for |
 |---|---|---|
-| **[`git-merge-driver`](#strategies)** | A Python CLI registered as a git merge driver | Merges on the command line and in CI, no editor involved |
+| **[`git-merge-driver`](#the-cli)** | A Python CLI registered as a git merge driver | Merges on the command line and in CI, no editor involved |
 | **[Structural Merge Resolver](extension/)** | A VS Code extension | Resolving conflicts interactively, with a UI |
 
 Git's default merge is line-based, so two branches that each add a key to the
@@ -15,8 +15,10 @@ choices rather than a file full of conflict markers.
 
 ![The resolver, showing two conflicting keys with ours/theirs choices and a live preview](docs/images/resolver-dark.png)
 
-The two implementations share a fixture corpus in [`tests/corpus/`](tests/corpus/)
-that both test suites run, so their merge semantics cannot drift apart.
+The two share a fixture corpus in [`tests/corpus/`](tests/corpus/) that both test
+suites run, so their merge semantics cannot drift apart. Where they differ on
+purpose — the extension merges arrays, the CLI keeps them whole — the fixture
+states each engine's result rather than hiding it.
 
 ---
 
@@ -86,9 +88,12 @@ tree of decisions — keys that merged cleanly marked as such, keys both branche
 changed offered as a choice between ours, theirs, base, or a value you type,
 with a live preview of the file that will be written.
 
-It handles JSON/JSONC, YAML, line-set files such as `.gitignore`, and lockfiles
-(which it declines to merge entry by entry, for good reason). It is
-self-contained TypeScript — installing it does not require Python or this CLI.
+It handles JSON/JSONC, YAML, TOML, XML, `.env`, line-set files such as
+`.gitignore`, and lockfiles (which it declines to merge entry by entry, for good
+reason). Arrays merge as sets or by an identifying field rather than
+all-or-nothing, and version conflicts come with the newer side marked
+*Recommended*. It is self-contained TypeScript — installing it does not require
+Python or this CLI.
 
 ```sh
 cd extension

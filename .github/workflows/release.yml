@@ -1,0 +1,58 @@
+name: Release
+
+# Publishing is deliberately tag-triggered rather than automatic on main: a
+# release should be a decision, not a side effect of merging.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    name: Package and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Check the tag matches the manifest version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          manifest=$(node -p "require('./package.json').version")
+          if [ "$tag" != "$manifest" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $manifest" >&2
+            exit 1
+          fi
+
+      - name: Package
+        run: |
+          npm run build -- --production
+          npx vsce package --no-dependencies \
+            --out "structural-merge-resolver-${GITHUB_REF_NAME#v}.vsix"
+
+      - name: Attach the build to the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: extension/*.vsix
+          body_path: extension/CHANGELOG.md
+
+      # Publishing needs a Marketplace token in the VSCE_PAT secret. Without
+      # one the job still produces an installable .vsix on the release.
+      - name: Publish to the Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx vsce publish --no-dependencies --packagePath ./*.vsix

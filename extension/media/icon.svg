@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <rect width="128" height="128" rx="26" fill="#1f2430"/>
+  <!-- two branches converging on a resolved node -->
+  <g fill="none" stroke-width="7" stroke-linecap="round">
+    <path d="M34 30v24a20 20 0 0 0 20 20h18" stroke="#6aa9ff"/>
+    <path d="M34 98V74" stroke="#6aa9ff"/>
+    <path d="M94 30v24a20 20 0 0 1-20 20H56" stroke="#e2a03f"/>
+  </g>
+  <circle cx="34" cy="24" r="9" fill="#6aa9ff"/>
+  <circle cx="94" cy="24" r="9" fill="#e2a03f"/>
+  <circle cx="64" cy="74" r="12" fill="#81b88b"/>
+  <path d="M58 74l4.5 4.5L71 70" stroke="#1f2430" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="34" cy="104" r="9" fill="#6aa9ff"/>
+</svg>
