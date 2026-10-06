@@ -1,8 +1,10 @@
 /** Format detection and the engine registry. */
 
+import { createDotenvEngine } from "./dotenv";
 import { createJsonEngine } from "./json";
 import { createLinesEngine } from "./lines";
 import { createLockfileEngine } from "./lockfile";
+import { createTomlEngine } from "./toml";
 import type { MergeEngine, MergeFormat } from "./types";
 import { createYamlEngine } from "./yaml";
 
@@ -53,6 +55,14 @@ export function detectFormat(path: string): MergeFormat | null {
   if (lower.endsWith(".yaml") || lower.endsWith(".yml")) {
     return "yaml";
   }
+  if (lower.endsWith(".toml")) {
+    return "toml";
+  }
+  // .env, .env.local, .env.production — but not .env.example's siblings being
+  // treated differently, since they all have the same shape.
+  if (name === ".env" || name.startsWith(".env.")) {
+    return "dotenv";
+  }
   return null;
 }
 
@@ -67,6 +77,10 @@ export function createEngine(format: MergeFormat): MergeEngine {
       return createYamlEngine();
     case "lockfile":
       return createLockfileEngine();
+    case "dotenv":
+      return createDotenvEngine();
+    case "toml":
+      return createTomlEngine();
   }
 }
 

@@ -8,7 +8,13 @@
 
 export type Side = "base" | "ours" | "theirs";
 
-export type MergeFormat = "json" | "yaml" | "lines" | "lockfile";
+export type MergeFormat =
+  | "json"
+  | "yaml"
+  | "lines"
+  | "lockfile"
+  | "dotenv"
+  | "toml";
 
 /**
  * How a node ended up with its value.

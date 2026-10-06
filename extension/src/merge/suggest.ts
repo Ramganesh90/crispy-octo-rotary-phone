@@ -23,7 +23,10 @@ export function parseVersion(text: unknown): Version | undefined {
   if (typeof text !== "string") {
     return undefined;
   }
-  const match = VERSION.exec(text);
+  // The TOML and .env engines carry values exactly as written, quotes
+  // included, so unwrap one layer of matching quotes before parsing.
+  const unquoted = /^(["'])(.*)\1$/.exec(text.trim());
+  const match = VERSION.exec(unquoted ? unquoted[2] : text);
   if (!match) {
     return undefined;
   }
