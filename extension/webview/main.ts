@@ -25,6 +25,8 @@ interface State {
   path: string;
   doc: MergeDocument;
   conflictsOnly: boolean;
+  /** Lower-cased key filter typed in the toolbar. */
+  search: string;
   collapsed: Set<string>;
   /** Node whose inline value editor is open. */
   editing?: string;
@@ -76,6 +78,23 @@ function* allNodes(nodes: MergeNode[]): Generator<MergeNode> {
       yield* allNodes(node.children);
     }
   }
+}
+
+/** True when this node or anything under it matches the typed filter. */
+function matchesSearch(node: MergeNode, search: string): boolean {
+  if (search === "") {
+    return true;
+  }
+  if (node.label.toLowerCase().includes(search)) {
+    return true;
+  }
+  const values = [node.sides.ours, node.sides.theirs]
+    .filter((side) => side.present)
+    .map((side) => side.display.toLowerCase());
+  if (values.some((value) => value.includes(search))) {
+    return true;
+  }
+  return (node.children ?? []).some((child) => matchesSearch(child, search));
 }
 
 function hasConflictBelow(node: MergeNode): boolean {
@@ -173,6 +192,29 @@ function renderChoices(node: MergeNode): HTMLElement {
  */
 function renderWholeChoice(node: MergeNode): HTMLElement {
   const wrap = element("span", "whole");
+
+  // Resolve just the conflicts under here, leaving clean merges alone — the
+  // common case when one subtree is contentious and the rest is fine.
+  const below = [...allNodes(node.children ?? [])].filter(
+    (n) => !n.children && n.status === "conflict",
+  );
+  if (below.length > 1) {
+    for (const side of ["ours", "theirs"] as const) {
+      const button = element("button", "choice tiny");
+      button.textContent = `${below.length} below: ${side}`;
+      button.title = `Resolve the ${below.length} conflicts under ${node.label} as ${side}, leaving everything that merged cleanly alone`;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        for (const child of below) {
+          child.resolution = { kind: "side", side };
+          post({ type: "setResolution", nodeId: child.id, resolution: child.resolution });
+        }
+        render();
+      });
+      wrap.append(button);
+    }
+  }
+
   for (const side of ["ours", "theirs"] as const) {
     const selected = node.resolution.kind === "side" && node.resolution.side === side;
     const button = element("button", "choice tiny");
@@ -188,6 +230,55 @@ function renderWholeChoice(node: MergeNode): HTMLElement {
       render();
     });
     wrap.append(button);
+  }
+  return wrap;
+}
+
+/** True when a one-line summary like "{3 keys}" hides what actually differs. */
+function isStructured(node: MergeNode): boolean {
+  return [node.sides.ours, node.sides.theirs].some(
+    (side) => side.present && typeof side.value === "object" && side.value !== null,
+  );
+}
+
+function pretty(side: MergeNode["sides"]["ours"]): string[] {
+  if (!side.present) {
+    return ["(removed)"];
+  }
+  return JSON.stringify(side.value, null, 2).split("\n");
+}
+
+/**
+ * A side-by-side view for a conflict whose values are objects or arrays,
+ * where the collapsed summary says nothing useful. Lines present on only one
+ * side are marked, so what actually differs is visible.
+ */
+function renderDiff(node: MergeNode, depth: number): HTMLElement {
+  const wrap = element("div", "diff");
+  wrap.style.marginLeft = `${12 + depth * 16}px`;
+
+  const ourLines = pretty(node.sides.ours);
+  const theirLines = pretty(node.sides.theirs);
+  const ourSet = new Set(ourLines.map((l) => l.trim()));
+  const theirSet = new Set(theirLines.map((l) => l.trim()));
+
+  for (const [side, lines, otherSet] of [
+    ["Ours", ourLines, theirSet],
+    ["Theirs", theirLines, ourSet],
+  ] as const) {
+    const column = element("div", "diff-col");
+    column.append(element("h4", undefined, side));
+    const pre = element("pre");
+    for (const line of lines) {
+      const span = element("span", "diff-line");
+      if (line.trim() !== "" && !otherSet.has(line.trim())) {
+        span.classList.add(side === "Ours" ? "only-ours" : "only-theirs");
+      }
+      span.textContent = line;
+      pre.append(span, document.createTextNode("\n"));
+    }
+    column.append(pre);
+    wrap.append(column);
   }
   return wrap;
 }
@@ -255,6 +346,9 @@ function renderNode(node: MergeNode, depth: number, into: HTMLElement): void {
   const isConflict = !node.children && node.status === "conflict";
 
   if (state.conflictsOnly && !hasConflictBelow(node)) {
+    return;
+  }
+  if (!matchesSearch(node, state.search)) {
     return;
   }
 
@@ -330,6 +424,14 @@ function renderNode(node: MergeNode, depth: number, into: HTMLElement): void {
 
   if (isConflict) {
     row.append(renderChoices(node));
+    if (state.current === node.id && isStructured(node)) {
+      into.append(row);
+      into.append(renderDiff(node, depth));
+      if (state.editing === node.id) {
+        into.append(renderCustomEditor(node));
+      }
+      return;
+    }
   } else {
     const resolved =
       node.status === "theirs-only" ? node.sides.theirs : node.sides.ours;
@@ -396,6 +498,25 @@ function renderToolbar(): HTMLElement {
     );
   } else {
     bar.append(element("span", "badge", "merges cleanly"));
+  }
+
+  if (doc.format !== "lockfile") {
+    const search = element("input", "search");
+    search.type = "search";
+    search.placeholder = "Filter keys…";
+    search.value = state!.search;
+    search.setAttribute("aria-label", "Filter the tree by key or value");
+    search.addEventListener("input", () => {
+      if (state) {
+        state.search = search.value.trim().toLowerCase();
+        render();
+        // Re-focus, since rendering replaces the element.
+        const next = document.querySelector<HTMLInputElement>(".toolbar .search");
+        next?.focus();
+        next?.setSelectionRange(next.value.length, next.value.length);
+      }
+    });
+    bar.append(search);
   }
 
   // Bulk actions and the filter only make sense over a tree of decisions; a
@@ -673,6 +794,7 @@ window.addEventListener("message", (event: MessageEvent<HostMessage>) => {
         path: message.path,
         doc: message.doc,
         conflictsOnly: state?.conflictsOnly ?? false,
+        search: state?.search ?? "",
         collapsed,
         current: conflictLeaves(message.doc.root)[0]?.id,
         preview: state?.preview ?? "",

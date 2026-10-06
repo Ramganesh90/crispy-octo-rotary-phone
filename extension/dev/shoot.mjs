@@ -54,8 +54,8 @@ function check(name, condition, detail = "") {
 
 const browser = await chromium.launch();
 
-async function open(fixture, theme) {
-  const page = await browser.newPage({ viewport: { width: 980, height: 760 } });
+async function open(fixture, theme, height = 760) {
+  const page = await browser.newPage({ viewport: { width: 1020, height } });
   page.on("pageerror", (error) => {
     failures.push(`page error: ${error.message}`);
     console.log(`  FAIL page error: ${error.message}`);
@@ -306,6 +306,72 @@ check(
   "the banner offers the text editor as the way out",
   (await page.locator(".banner button").count()) === 1,
 );
+await page.close();
+
+// ------------------------------------------------------- search, subtree, diff
+
+console.log("ui depth:");
+page = await open("diff", "dark", 760);
+
+const beforeFilter = await page.locator(".tree .row").count();
+await page.fill(".toolbar .search", "retr");
+await page.waitForTimeout(150);
+const afterFilter = await page.locator(".tree .row").count();
+check(
+  "filtering by key narrows the tree",
+  afterFilter < beforeFilter && afterFilter > 0,
+  `${beforeFilter} -> ${afterFilter}`,
+);
+check(
+  "the filter keeps the matching key visible",
+  ((await page.textContent(".tree")) ?? "").includes("retries"),
+);
+await page.fill(".toolbar .search", "nothingmatchesthis");
+await page.waitForTimeout(150);
+check(
+  "a filter matching nothing says so rather than showing an empty pane",
+  (await page.locator(".tree .message").count()) === 1,
+);
+await page.fill(".toolbar .search", "");
+await page.waitForTimeout(150);
+
+const settings = page.locator(".row.container", { hasText: "settings" }).first();
+await settings.hover();
+check(
+  "a subtree with several conflicts offers to resolve just those",
+  (await settings.locator(".whole button").allTextContents()).some((t) =>
+    t.includes("below"),
+  ),
+);
+await settings.locator(".whole button", { hasText: "below: theirs" }).click();
+await page.waitForTimeout(150);
+const afterSubtree = (await page.textContent(".preview pre")) ?? "";
+check(
+  "resolving a subtree applies to its conflicts only",
+  afterSubtree.includes('"retries": 5') && afterSubtree.includes('"parallel": true'),
+  "",
+);
+
+// A conflict whose value is a whole array gets a real diff, not "{3 items}".
+for (let i = 0; i < 4; i++) {
+  await page.keyboard.press("j");
+}
+await page.waitForTimeout(200);
+check(
+  "a structured conflict shows both sides side by side",
+  (await page.locator(".diff-col").count()) === 2,
+);
+check(
+  "lines on only one side are marked",
+  (await page.locator(".diff-line.only-ours, .diff-line.only-theirs").count()) > 0,
+);
+const diffBox = await page.locator(".diff").boundingBox();
+check(
+  "the diff is bounded rather than clipped by the pane",
+  diffBox !== null && diffBox.height > 60 && diffBox.height < 420,
+  `height=${Math.round(diffBox?.height ?? 0)}`,
+);
+await page.screenshot({ path: join(outDir, "resolver-diff.png") });
 await page.close();
 
 await browser.close();

@@ -103,6 +103,28 @@ const FIXTURES = {
       steps: [{ uses: "checkout", ref: "release" }, { uses: "cache" }],
     }),
   },
+  diff: {
+    path: "tsconfig.json",
+    base: JSON.stringify({
+      compilerOptions: { target: "ES2020", strict: true, lib: ["dom"] },
+      settings: { retries: 1, timeout: 30 },
+      keywords: ["cli", "cli", "merge"],
+    }),
+    ours: JSON.stringify(
+      {
+        compilerOptions: { target: "ES2022", strict: true, lib: ["dom", "es2022"] },
+        settings: { retries: 2, timeout: 60, parallel: true },
+        keywords: ["cli", "cli", "merge", "git", "json"],
+      },
+      null,
+      2,
+    ),
+    theirs: JSON.stringify({
+      compilerOptions: { target: "ESNext", strict: false, lib: ["dom", "esnext"] },
+      settings: { retries: 5, timeout: 90 },
+      keywords: ["cli", "cli", "merge", "yaml"],
+    }),
+  },
 } as const;
 
 type FixtureName = keyof typeof FIXTURES;
@@ -117,6 +139,7 @@ const FORMATS: Record<FixtureName, MergeFormat> = {
   yaml: "yaml",
   lockfile: "lockfile",
   arrays: "json",
+  diff: "json",
 };
 const engine = createEngine(FORMATS[which] ?? "json");
 

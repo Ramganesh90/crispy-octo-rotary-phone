@@ -422,3 +422,69 @@ kbd {
   margin-left: auto;
   flex: none;
 }
+
+/* ---------- filter box ---------- */
+
+.toolbar .search {
+  flex: 0 1 180px;
+  min-width: 120px;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--border));
+  padding: 2px 6px;
+}
+
+/* ---------- side-by-side diff ---------- */
+
+.diff {
+  display: flex;
+  gap: 12px;
+  margin: 2px 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.diff-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.diff-col h4 {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: var(--vscode-editorWidget-background, transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.diff-col pre {
+  margin: 0;
+  padding: 6px 0;
+  /* Self-contained: a long value scrolls here rather than being clipped by
+     the tree pane. */
+  max-height: 180px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+.diff-line {
+  display: inline-block;
+  width: 100%;
+  padding: 0 8px;
+}
+
+.diff-line.only-ours {
+  background: var(--vscode-diffEditor-removedTextBackground, rgba(255, 100, 100, 0.2));
+}
+
+.diff-line.only-theirs {
+  background: var(--vscode-diffEditor-insertedTextBackground, rgba(100, 255, 100, 0.2));
+}
