@@ -11,3 +11,6 @@ esbuild.mjs
 tsconfig.json
 eslint.config.mjs
 .gitignore
+dist/preview-host.js
+dist/preview-host.js.map
+dist/*.map

@@ -1,12 +1,29 @@
 # crispy-octo-rotary-phone
 
-`git-merge-driver` — a custom [git merge driver](https://git-scm.com/docs/gitattributes#_defining_a_custom_merge_driver)
-CLI with pluggable strategies. Pure Python standard library, no dependencies.
+Merging structured files key by key instead of line by line, in two forms:
+
+| | What it is | Use it for |
+|---|---|---|
+| **[`git-merge-driver`](#strategies)** | A Python CLI registered as a git merge driver | Merges on the command line and in CI, no editor involved |
+| **[Structural Merge Resolver](extension/)** | A VS Code extension | Resolving conflicts interactively, with a UI |
 
 Git's default merge is line-based, so two branches that each add a key to the
 same JSON object, or a line to the end of `.gitignore`, conflict even though
 the changes are independent. A merge driver lets git hand those files to a
-smarter merger.
+smarter merger; the extension goes further and turns what is left into a set of
+choices rather than a file full of conflict markers.
+
+![The resolver, showing two conflicting keys with ours/theirs choices and a live preview](docs/images/resolver-dark.png)
+
+The two implementations share a fixture corpus in [`tests/corpus/`](tests/corpus/)
+that both test suites run, so their merge semantics cannot drift apart.
+
+---
+
+## The CLI
+
+`git-merge-driver` — a custom [git merge driver](https://git-scm.com/docs/gitattributes#_defining_a_custom_merge_driver)
+with pluggable strategies. Pure Python standard library, no dependencies.
 
 ## Strategies
 
@@ -59,11 +76,39 @@ git-merge-driver merge -s json BASE OURS THEIRS   # what git invokes (%O %A %B)
 
 `merge` writes the result into `OURS` and exits `0` when clean, `1` on conflict.
 
+---
+
+## The VS Code extension
+
+See [`extension/`](extension/) for the full description. In short: conflicted
+files appear in a **Merge Conflicts** view, and opening one shows the merge as a
+tree of decisions — keys that merged cleanly marked as such, keys both branches
+changed offered as a choice between ours, theirs, base, or a value you type,
+with a live preview of the file that will be written.
+
+It handles JSON/JSONC, YAML, line-set files such as `.gitignore`, and lockfiles
+(which it declines to merge entry by entry, for good reason). It is
+self-contained TypeScript — installing it does not require Python or this CLI.
+
+```sh
+cd extension
+npm install && npm run build
+```
+
+Press <kbd>F5</kbd> in VS Code to launch it in an Extension Development Host.
+
+---
+
 ## Tests
 
 ```sh
-python3 -m unittest discover -s tests -t .
+python3 -m unittest discover -s tests -t .   # the CLI, and the shared corpus
+cd extension && npm test                     # the extension engines and git plumbing
+cd extension && node dev/shoot.mjs           # the resolver UI, in Chromium
 ```
 
-The integration tests create scratch repositories and run real `git merge`s
-through the driver.
+The Python integration tests create scratch repositories and run real
+`git merge`s through the driver. The extension's git tests do the same against
+real conflicted indexes, and `dev/shoot.mjs` drives the real webview against the
+real engine in a browser, asserting the interactions and capturing the
+screenshots used in this README.
