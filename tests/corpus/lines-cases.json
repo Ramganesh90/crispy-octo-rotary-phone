@@ -1,0 +1,50 @@
+[
+  {
+    "name": "additions from both sides are kept",
+    "base": "*.log\n",
+    "ours": "*.log\nbuild/\n",
+    "theirs": "*.log\ndist/\n",
+    "expectedConflicts": [],
+    "expectedValue": ["*.log", "build/", "dist/"]
+  },
+  {
+    "name": "removals from either side are applied",
+    "base": "a\nb\nc\n",
+    "ours": "a\nc\n",
+    "theirs": "a\nb\n",
+    "expectedConflicts": [],
+    "expectedValue": ["a"]
+  },
+  {
+    "name": "the same addition is not duplicated",
+    "base": "a\n",
+    "ours": "a\nx\n",
+    "theirs": "a\nx\n",
+    "expectedConflicts": [],
+    "expectedValue": ["a", "x"]
+  },
+  {
+    "name": "ours order is preserved with theirs appended",
+    "base": "b\n",
+    "ours": "z\nb\na\n",
+    "theirs": "b\nm\n",
+    "expectedConflicts": [],
+    "expectedValue": ["z", "b", "a", "m"]
+  },
+  {
+    "name": "everything removed yields an empty file",
+    "base": "a\nb\n",
+    "ours": "a\n",
+    "theirs": "b\n",
+    "expectedConflicts": [],
+    "expectedValue": []
+  },
+  {
+    "name": "no common ancestor keeps both sides",
+    "base": null,
+    "ours": "a\n",
+    "theirs": "b\n",
+    "expectedConflicts": [],
+    "expectedValue": ["a", "b"]
+  }
+]
