@@ -10,6 +10,7 @@
 
 import { applyEdits, modify, parse as parseJsonc, type ParseError } from "jsonc-parser";
 
+import { annotateSuggestions } from "./suggest";
 import { buildNode, collectLeafEdits } from "./tree";
 import {
   ABSENT,
@@ -65,6 +66,7 @@ export class JsonMergeEngine implements MergeEngine {
     this.oursText = ours;
 
     const root = rootNode.children ?? [rootNode];
+    annotateSuggestions(root);
     return { format: "json", root, ...countConflicts(root) };
   }
 

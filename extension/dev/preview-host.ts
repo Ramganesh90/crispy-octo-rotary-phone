@@ -7,6 +7,7 @@
  */
 
 import { createEngine } from "../src/merge/index";
+import type { MergeFormat } from "../src/merge/types";
 import { countConflicts, type MergeNode, walk } from "../src/merge/types";
 import type { HostMessage, WebviewMessage } from "../src/ui/messages";
 
@@ -77,6 +78,31 @@ const FIXTURES = {
       packages: { "": {}, "node_modules/zod": {} },
     }),
   },
+  arrays: {
+    path: ".github/workflows/ci.yml → as JSON",
+    base: JSON.stringify({
+      include: ["src"],
+      dependencies: { react: "18.0.0", vite: "5.0.0" },
+      steps: [{ uses: "checkout", ref: "main" }],
+    }),
+    ours: JSON.stringify(
+      {
+        include: ["src", "tests"],
+        dependencies: { react: "18.2.0", vite: "5.4.0" },
+        steps: [
+          { uses: "checkout", ref: "develop" },
+          { uses: "setup-node", node: "20" },
+        ],
+      },
+      null,
+      2,
+    ),
+    theirs: JSON.stringify({
+      include: ["src", "scripts"],
+      dependencies: { react: "19.0.0", vite: "5.2.0" },
+      steps: [{ uses: "checkout", ref: "release" }, { uses: "cache" }],
+    }),
+  },
 } as const;
 
 type FixtureName = keyof typeof FIXTURES;
@@ -84,7 +110,15 @@ type FixtureName = keyof typeof FIXTURES;
 const which = (new URLSearchParams(location.search).get("fixture") ??
   "json") as FixtureName;
 const fixture = FIXTURES[which] ?? FIXTURES.json;
-const engine = createEngine(which in FIXTURES ? which : "json");
+/** Fixture names are not format names: `arrays` is a JSON document too. */
+const FORMATS: Record<FixtureName, MergeFormat> = {
+  json: "json",
+  lines: "lines",
+  yaml: "yaml",
+  lockfile: "lockfile",
+  arrays: "json",
+};
+const engine = createEngine(FORMATS[which] ?? "json");
 
 const doc = engine.analyze(fixture.base, fixture.ours, fixture.theirs);
 

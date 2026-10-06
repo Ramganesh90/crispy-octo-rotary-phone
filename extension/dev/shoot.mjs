@@ -213,6 +213,62 @@ check(
 await page.screenshot({ path: join(outDir, "resolver-lockfile.png") });
 await page.close();
 
+// -------------------------------------------------------------- arrays fixture
+
+console.log("arrays fixture:");
+page = await open("arrays", "dark");
+check(
+  "a scalar array merges as a list instead of conflicting",
+  ((await page.textContent(".tree")) ?? "").includes("merged as a list"),
+);
+const arraysPreview = (await page.textContent(".preview pre")) ?? "";
+check(
+  "both branches' list additions are kept",
+  arraysPreview.includes('"tests"') && arraysPreview.includes('"scripts"'),
+);
+check(
+  "records are matched by their identity field",
+  ((await page.textContent(".tree")) ?? "").includes("matched up by"),
+);
+check(
+  "only the field both branches changed conflicts",
+  (await page.locator(".row.conflict").count()) === 3,
+  `rows=${await page.locator(".row.conflict").count()}`,
+);
+check(
+  "the newer version is marked recommended",
+  (await page.locator(".choice.suggested .rec").count()) === 2,
+);
+check(
+  "accept-recommended is offered with a count",
+  ((await page.textContent(".toolbar")) ?? "").includes("Accept 2 recommended"),
+);
+await page.screenshot({ path: join(outDir, "resolver-arrays.png") });
+
+await page.locator(".toolbar button", { hasText: "Accept" }).click();
+await page.waitForTimeout(150);
+check(
+  "accepting recommendations resolves exactly those conflicts",
+  ((await page.textContent(".footer .status")) ?? "").includes("1 conflict"),
+  (await page.textContent(".footer .status")) ?? "",
+);
+check(
+  "accepted recommendations reach the merged output",
+  ((await page.textContent(".preview pre")) ?? "").includes('"19.0.0"'),
+);
+
+// The whole-subtree override must beat the entry-by-entry merge.
+await page.locator(".row.container", { hasText: "include" }).first().hover();
+await page.locator(".row.container", { hasText: "include" }).first()
+  .locator(".whole button", { hasText: "theirs" }).click();
+await page.waitForTimeout(150);
+const overridden = (await page.textContent(".preview pre")) ?? "";
+check(
+  "keeping a subtree whole overrides the merge",
+  overridden.includes('"scripts"') && !overridden.includes('"tests"'),
+);
+await page.close();
+
 await browser.close();
 
 console.log(

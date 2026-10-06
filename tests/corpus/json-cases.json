@@ -5,7 +5,11 @@
     "ours": "{\n  \"a\": 1,\n  \"b\": 2\n}\n",
     "theirs": "{\n  \"a\": 1,\n  \"c\": 3\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": 1, "b": 2, "c": 3 }
+    "expectedValue": {
+      "a": 1,
+      "b": 2,
+      "c": 3
+    }
   },
   {
     "name": "nested objects merge recursively",
@@ -13,7 +17,13 @@
     "ours": "{\n  \"deps\": {\n    \"x\": \"2.0\",\n    \"y\": \"1.0\"\n  }\n}\n",
     "theirs": "{\n  \"deps\": {\n    \"x\": \"1.0\",\n    \"y\": \"3.0\",\n    \"z\": \"1.0\"\n  }\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "deps": { "x": "2.0", "y": "3.0", "z": "1.0" } }
+    "expectedValue": {
+      "deps": {
+        "x": "2.0",
+        "y": "3.0",
+        "z": "1.0"
+      }
+    }
   },
   {
     "name": "deletion on one side is applied",
@@ -21,7 +31,10 @@
     "ours": "{\n  \"a\": 1\n}\n",
     "theirs": "{\n  \"a\": 1,\n  \"b\": 2,\n  \"c\": 3\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": 1, "c": 3 }
+    "expectedValue": {
+      "a": 1,
+      "c": 3
+    }
   },
   {
     "name": "deletion by both sides",
@@ -29,31 +42,61 @@
     "ours": "{\n  \"a\": 1\n}\n",
     "theirs": "{\n  \"a\": 1\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": 1 }
+    "expectedValue": {
+      "a": 1
+    }
   },
   {
     "name": "conflicting scalar keeps ours and reports the path",
     "base": "{\n  \"v\": {\n    \"n\": 1\n  }\n}\n",
     "ours": "{\n  \"v\": {\n    \"n\": 2\n  }\n}\n",
     "theirs": "{\n  \"v\": {\n    \"n\": 3\n  }\n}\n",
-    "expectedConflicts": ["$[\"v\"][\"n\"]"],
-    "expectedValue": { "v": { "n": 2 } }
+    "expectedConflicts": [
+      "$[\"v\"][\"n\"]"
+    ],
+    "expectedValue": {
+      "v": {
+        "n": 2
+      }
+    }
   },
   {
     "name": "delete versus modify conflicts",
     "base": "{\n  \"a\": 1\n}\n",
     "ours": "{}\n",
     "theirs": "{\n  \"a\": 2\n}\n",
-    "expectedConflicts": ["$[\"a\"]"],
+    "expectedConflicts": [
+      "$[\"a\"]"
+    ],
     "expectedValue": {}
   },
   {
-    "name": "arrays are atomic",
+    "name": "scalar arrays: the engines differ by design",
     "base": "{\n  \"l\": [1]\n}\n",
     "ours": "{\n  \"l\": [1, 2]\n}\n",
     "theirs": "{\n  \"l\": [1, 3]\n}\n",
-    "expectedConflicts": ["$[\"l\"]"],
-    "expectedValue": { "l": [1, 2] }
+    "expectedConflicts": [
+      "$[\"l\"]"
+    ],
+    "expectedValue": {
+      "l": [
+        1,
+        2
+      ]
+    },
+    "note": "The CLI treats every array atomically. The extension merges arrays of scalars as a set, so both branches appending an entry is clean. Stated per engine rather than hidden.",
+    "overrides": {
+      "typescript": {
+        "expectedConflicts": [],
+        "expectedValue": {
+          "l": [
+            1,
+            2,
+            3
+          ]
+        }
+      }
+    }
   },
   {
     "name": "identical changes do not conflict",
@@ -61,15 +104,21 @@
     "ours": "{\n  \"a\": 2\n}\n",
     "theirs": "{\n  \"a\": 2\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": 2 }
+    "expectedValue": {
+      "a": 2
+    }
   },
   {
     "name": "comparison is type sensitive",
     "base": "{\n  \"a\": 0\n}\n",
     "ours": "{\n  \"a\": 1\n}\n",
     "theirs": "{\n  \"a\": true\n}\n",
-    "expectedConflicts": ["$[\"a\"]"],
-    "expectedValue": { "a": 1 }
+    "expectedConflicts": [
+      "$[\"a\"]"
+    ],
+    "expectedValue": {
+      "a": 1
+    }
   },
   {
     "name": "add add with no common ancestor",
@@ -77,7 +126,10 @@
     "ours": "{\n  \"a\": 1\n}\n",
     "theirs": "{\n  \"b\": 2\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": 1, "b": 2 }
+    "expectedValue": {
+      "a": 1,
+      "b": 2
+    }
   },
   {
     "name": "deeply nested additions from both sides",
@@ -85,14 +137,24 @@
     "ours": "{\n  \"a\": {\n    \"b\": {\n      \"c\": 1,\n      \"d\": 2\n    }\n  }\n}\n",
     "theirs": "{\n  \"a\": {\n    \"b\": {\n      \"c\": 1,\n      \"e\": 3\n    }\n  }\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": { "b": { "c": 1, "d": 2, "e": 3 } } }
+    "expectedValue": {
+      "a": {
+        "b": {
+          "c": 1,
+          "d": 2,
+          "e": 3
+        }
+      }
+    }
   },
   {
     "name": "clean merges alongside one conflict",
     "base": "{\n  \"name\": \"app\",\n  \"deps\": {\n    \"react\": \"18.0.0\",\n    \"lodash\": \"4.17.0\"\n  }\n}\n",
     "ours": "{\n  \"name\": \"app\",\n  \"deps\": {\n    \"react\": \"18.2.0\",\n    \"lodash\": \"4.17.0\",\n    \"vite\": \"5.0.0\"\n  }\n}\n",
     "theirs": "{\n  \"name\": \"app\",\n  \"deps\": {\n    \"react\": \"19.0.0\",\n    \"lodash\": \"4.17.21\",\n    \"zod\": \"3.22.0\"\n  }\n}\n",
-    "expectedConflicts": ["$[\"deps\"][\"react\"]"],
+    "expectedConflicts": [
+      "$[\"deps\"][\"react\"]"
+    ],
     "expectedValue": {
       "name": "app",
       "deps": {
@@ -108,8 +170,12 @@
     "base": "{\n  \"a\": {\n    \"b\": 1\n  }\n}\n",
     "ours": "{\n  \"a\": 5\n}\n",
     "theirs": "{\n  \"a\": {\n    \"b\": 2\n  }\n}\n",
-    "expectedConflicts": ["$[\"a\"]"],
-    "expectedValue": { "a": 5 }
+    "expectedConflicts": [
+      "$[\"a\"]"
+    ],
+    "expectedValue": {
+      "a": 5
+    }
   },
   {
     "name": "null is a value, not an absence",
@@ -117,6 +183,8 @@
     "ours": "{\n  \"a\": null\n}\n",
     "theirs": "{\n  \"a\": 1\n}\n",
     "expectedConflicts": [],
-    "expectedValue": { "a": null }
+    "expectedValue": {
+      "a": null
+    }
   }
 ]

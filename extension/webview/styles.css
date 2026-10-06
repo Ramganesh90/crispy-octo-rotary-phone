@@ -352,3 +352,51 @@ kbd {
   color: var(--muted);
   line-height: 1.5;
 }
+
+/* ---------- recommendations and whole-subtree overrides ---------- */
+
+.choice.suggested {
+  border-color: var(--added);
+}
+
+.choice .rec {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--added);
+  border: 1px solid var(--added);
+  border-radius: 8px;
+  padding: 0 5px;
+  flex: none;
+}
+
+.choice[aria-pressed="true"] .rec {
+  color: inherit;
+  border-color: currentColor;
+}
+
+.row .strategy {
+  color: var(--muted);
+  font-size: 0.85em;
+  font-style: italic;
+  flex: none;
+}
+
+.whole {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+  opacity: 0;
+}
+
+.row:hover .whole,
+.row:focus-within .whole,
+.whole:has([aria-pressed="true"]) {
+  opacity: 1;
+}
+
+.choice.tiny {
+  font-size: 0.8em;
+  padding: 1px 6px;
+  font-weight: normal;
+}

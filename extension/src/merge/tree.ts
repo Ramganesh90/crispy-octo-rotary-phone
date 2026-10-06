@@ -7,6 +7,13 @@
  */
 
 import {
+  type ArrayStrategy,
+  arrayStrategy,
+  describeStrategy,
+  elementIdentity,
+  elementLabel,
+} from "./arrays";
+import {
   ABSENT,
   formatPath,
   type MergeNode,
@@ -101,6 +108,35 @@ export function buildNode(
     return node;
   }
 
+  // Both sides are arrays and they differ: merge the entries where the array's
+  // shape makes that safe, rather than forcing an all-or-nothing choice.
+  if (
+    ours.present &&
+    theirs.present &&
+    Array.isArray(ours.value) &&
+    Array.isArray(theirs.value) &&
+    status !== "unchanged"
+  ) {
+    node.kind = "array";
+    const baseItems = Array.isArray(base.value) ? base.value : [];
+    const strategy = arrayStrategy([baseItems, ours.value, theirs.value]);
+    node.arrayStrategy = describeStrategy(strategy);
+
+    if (strategy.kind !== "atomic") {
+      node.children = buildArrayChildren(
+        strategy,
+        baseItems,
+        ours.value,
+        theirs.value,
+        path,
+      );
+      node.status = node.children.some((c) => c.status === "conflict")
+        ? "conflict"
+        : "both-same";
+      return node;
+    }
+  }
+
   if (isPlainObject(ours.value) || isPlainObject(theirs.value)) {
     node.kind = "object";
   } else if (Array.isArray(ours.value) || Array.isArray(theirs.value)) {
@@ -110,6 +146,93 @@ export function buildNode(
     node.resolution = { kind: "unresolved" };
   }
   return node;
+}
+
+/**
+ * One child per distinct element, in ours' order with the incoming branch's
+ * new entries appended — the same ordering rule the object and line-set
+ * merges use.
+ *
+ * Note these children's `path` segments are element identities, not JSON
+ * pointers: an array is serialized as one whole value (see `materialize`),
+ * because set and keyed merges shift indices.
+ */
+function buildArrayChildren(
+  strategy: ArrayStrategy,
+  baseItems: unknown[],
+  ourItems: unknown[],
+  theirItems: unknown[],
+  path: (string | number)[],
+): MergeNode[] {
+  const index = (items: unknown[]) =>
+    new Map(items.map((item) => [elementIdentity(item, strategy), item]));
+
+  const baseIndex = index(baseItems);
+  const oursIndex = index(ourItems);
+  const theirsIndex = index(theirItems);
+
+  const order = [
+    ...ourItems.map((i) => elementIdentity(i, strategy)),
+    ...theirItems
+      .map((i) => elementIdentity(i, strategy))
+      .filter((id) => !oursIndex.has(id)),
+  ];
+
+  return order.map((id) => {
+    const at = (map: Map<string, unknown>): SideValue =>
+      map.has(id) ? sideValue(true, map.get(id)) : ABSENT;
+
+    const item = oursIndex.get(id) ?? theirsIndex.get(id);
+    return buildNode(
+      at(baseIndex),
+      at(oursIndex),
+      at(theirsIndex),
+      [...path, id],
+      elementLabel(item, strategy),
+    );
+  });
+}
+
+/**
+ * The value a node resolves to, folding in every descendant's decision.
+ * Returns undefined when anything below it is still unresolved.
+ *
+ * An explicit choice on a container wins over its children, which is what
+ * makes "keep this whole array as ours" work.
+ */
+export function materialize(node: MergeNode): SideValue | undefined {
+  if (node.resolution.kind === "side" || node.resolution.kind === "custom") {
+    return resolvedValue(node);
+  }
+  if (!node.children) {
+    return resolvedValue(node);
+  }
+
+  if (node.kind === "array") {
+    const items: unknown[] = [];
+    for (const child of node.children) {
+      const value = materialize(child);
+      if (value === undefined) {
+        return undefined;
+      }
+      if (value.present) {
+        items.push(value.value);
+      }
+    }
+    return sideValue(true, items);
+  }
+
+  const merged: Record<string, unknown> = {};
+  for (const child of node.children) {
+    const value = materialize(child);
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value.present) {
+      merged[child.label] = value.value;
+    }
+  }
+  return sideValue(true, merged);
 }
 
 export interface LeafEdit {
@@ -126,7 +249,32 @@ export interface LeafEdit {
  */
 export function collectLeafEdits(nodes: MergeNode[], edits: LeafEdit[] = []): LeafEdit[] {
   for (const node of nodes) {
+    // A merged array is written as one value: its children are matched by
+    // identity, so per-index edits would land on the wrong entries.
+    if (node.children && node.kind === "array") {
+      const resolved = materialize(node);
+      if (resolved !== undefined && !sameValue(resolved, node.sides.ours)) {
+        edits.push({
+          path: node.path,
+          value: resolved.present ? resolved.value : undefined,
+          present: resolved.present,
+        });
+      }
+      continue;
+    }
     if (node.children) {
+      // An explicit choice on an object container overrides its children.
+      if (node.resolution.kind === "side" || node.resolution.kind === "custom") {
+        const resolved = materialize(node);
+        if (resolved !== undefined && !sameValue(resolved, node.sides.ours)) {
+          edits.push({
+            path: node.path,
+            value: resolved.present ? resolved.value : undefined,
+            present: resolved.present,
+          });
+        }
+        continue;
+      }
       collectLeafEdits(node.children, edits);
       continue;
     }

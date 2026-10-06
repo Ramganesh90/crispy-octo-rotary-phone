@@ -14,13 +14,19 @@ import { createJsonEngine } from "../../merge/json";
 import { createLinesEngine } from "../../merge/lines";
 import { type MergeDocument, type MergeEngine, walk } from "../../merge/types";
 
-interface Case {
+interface Expectation {
+  expectedConflicts: string[];
+  expectedValue: unknown;
+}
+
+interface Case extends Expectation {
   name: string;
   base: string | null;
   ours: string;
   theirs: string;
-  expectedConflicts: string[];
-  expectedValue: unknown;
+  /** Where the two engines differ on purpose, each states its own result. */
+  overrides?: { typescript?: Expectation; python?: Expectation };
+  note?: string;
 }
 
 const CORPUS_DIR = join(__dirname, "..", "..", "..", "..", "..", "tests", "corpus");
@@ -38,15 +44,21 @@ function runCase(engine: MergeEngine, testCase: Case): { doc: MergeDocument; tex
   return { doc, text: engine.serialize(doc) };
 }
 
+/** The case's shared expectation, unless this engine states its own. */
+function expected(testCase: Case): Expectation {
+  return testCase.overrides?.typescript ?? testCase;
+}
+
 for (const testCase of loadCases("json-cases.json")) {
   test(`json corpus: ${testCase.name}`, () => {
     const { doc, text } = runCase(createJsonEngine(), testCase);
+    const want = expected(testCase);
 
-    assert.deepEqual(conflictPaths(doc), testCase.expectedConflicts, "conflict paths");
-    assert.equal(doc.conflictCount, testCase.expectedConflicts.length, "conflict count");
+    assert.deepEqual(conflictPaths(doc), want.expectedConflicts, "conflict paths");
+    assert.equal(doc.conflictCount, want.expectedConflicts.length, "conflict count");
     // Unresolved conflicts leave the current branch's value in place, which is
     // what the CLI does when it reports a conflicting path.
-    assert.deepEqual(JSON.parse(text), testCase.expectedValue, "merged value");
+    assert.deepEqual(JSON.parse(text), want.expectedValue, "merged value");
   });
 }
 

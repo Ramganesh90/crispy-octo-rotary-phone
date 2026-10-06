@@ -17,6 +17,7 @@
 
 import { isAlias, isNode, parseAllDocuments, parseDocument, visit, type Document } from "yaml";
 
+import { annotateSuggestions } from "./suggest";
 import { buildNode, collectLeafEdits } from "./tree";
 import {
   ABSENT,
@@ -81,6 +82,7 @@ export class YamlMergeEngine implements MergeEngine {
 
     const rootNode = buildNode(baseSide.value, oursSide.value, theirsSide.value);
     const root = rootNode.children ?? [rootNode];
+    annotateSuggestions(root);
     return { format: "yaml", root, ...countConflicts(root) };
   }
 

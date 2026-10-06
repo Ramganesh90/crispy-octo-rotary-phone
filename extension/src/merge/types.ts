@@ -51,6 +51,10 @@ export interface MergeNode {
   sides: { base: SideValue; ours: SideValue; theirs: SideValue };
   resolution: Resolution;
   children?: MergeNode[];
+  /** For arrays: how the entries were matched up, shown in the UI. */
+  arrayStrategy?: string;
+  /** A side the engine believes is right, with why. Never auto-applied. */
+  suggestion?: { side: Side; reason: string };
 }
 
 export interface MergeDocument {

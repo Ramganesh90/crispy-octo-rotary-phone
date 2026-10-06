@@ -67,6 +67,16 @@ function conflictLeaves(nodes: MergeNode[], into: MergeNode[] = []): MergeNode[]
   return into;
 }
 
+/** Every node in the tree, parents before children. */
+function* allNodes(nodes: MergeNode[]): Generator<MergeNode> {
+  for (const node of nodes) {
+    yield node;
+    if (node.children) {
+      yield* allNodes(node.children);
+    }
+  }
+}
+
 function hasConflictBelow(node: MergeNode): boolean {
   if (!node.children) {
     return node.status === "conflict";
@@ -124,6 +134,14 @@ function renderChoices(node: MergeNode): HTMLElement {
       element("span", "val", describe(node, side)),
     );
     button.title = `Use the ${SIDE_LABEL[side].toLowerCase()} value for ${node.label}`;
+
+    // A suggestion is a hint only: it marks the choice, never makes it.
+    if (node.suggestion?.side === side) {
+      button.classList.add("suggested");
+      button.append(element("span", "rec", "Recommended"));
+      button.title = `Recommended: ${node.suggestion.reason}`;
+    }
+
     button.addEventListener("click", () => choose(node, side));
     wrap.append(button);
   }
@@ -145,6 +163,31 @@ function renderChoices(node: MergeNode): HTMLElement {
     }
   });
   wrap.append(custom);
+  return wrap;
+}
+
+/**
+ * "Keep this whole subtree as one side", for when the merged-entry-by-entry
+ * result is not what was wanted. Clicking again returns to the merge.
+ */
+function renderWholeChoice(node: MergeNode): HTMLElement {
+  const wrap = element("span", "whole");
+  for (const side of ["ours", "theirs"] as const) {
+    const selected = node.resolution.kind === "side" && node.resolution.side === side;
+    const button = element("button", "choice tiny");
+    button.setAttribute("aria-pressed", String(selected));
+    button.textContent = `whole: ${side}`;
+    button.title = selected
+      ? `Go back to merging ${node.label} entry by entry`
+      : `Keep all of ${node.label} as ${side}, ignoring the entry-by-entry merge`;
+    button.addEventListener("click", (event) => {
+      event.stopPropagation(); // the row itself toggles collapse
+      node.resolution = selected ? { kind: "auto" } : { kind: "side", side };
+      post({ type: "setResolution", nodeId: node.id, resolution: node.resolution });
+      render();
+    });
+    wrap.append(button);
+  }
   return wrap;
 }
 
@@ -233,6 +276,10 @@ function renderNode(node: MergeNode, depth: number, into: HTMLElement): void {
       element("span", "twisty", collapsed ? "▸" : "▾"),
       element("span", "key", node.label),
     );
+    if (node.arrayStrategy) {
+      row.append(element("span", "strategy", node.arrayStrategy));
+    }
+
     const conflicts = conflictLeaves(node.children).length;
     row.append(
       element(
@@ -243,6 +290,10 @@ function renderNode(node: MergeNode, depth: number, into: HTMLElement): void {
           : "merges cleanly",
       ),
     );
+
+    // Any container can be overridden wholesale, which is the escape hatch
+    // when the entry-by-entry merge is not what you wanted.
+    row.append(renderWholeChoice(node));
     const toggle = () => {
       if (collapsed) {
         state?.collapsed.delete(node.id);
@@ -353,6 +404,28 @@ function renderToolbar(): HTMLElement {
     allOurs.addEventListener("click", () => post({ type: "setAll", side: "ours" }));
     const allTheirs = element("button", undefined, "All theirs");
     allTheirs.addEventListener("click", () => post({ type: "setAll", side: "theirs" }));
+
+    const recommended = [...allNodes(doc.root)].filter(
+      (n) => n.suggestion && n.resolution.kind === "unresolved",
+    );
+    if (recommended.length > 0) {
+      const accept = element(
+        "button",
+        undefined,
+        `Accept ${recommended.length} recommended`,
+      );
+      accept.title = recommended
+        .map((n) => `${n.label}: ${n.suggestion!.reason}`)
+        .join("\n");
+      accept.addEventListener("click", () => {
+        for (const node of recommended) {
+          node.resolution = { kind: "side", side: node.suggestion!.side };
+          post({ type: "setResolution", nodeId: node.id, resolution: node.resolution });
+        }
+        render();
+      });
+      bar.append(accept);
+    }
 
     const filter = element("label", "check");
     const box = element("input");
