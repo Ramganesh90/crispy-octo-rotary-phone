@@ -32,6 +32,7 @@ interface State {
   current?: string;
   preview: string;
   applied: boolean;
+  manualEdits: boolean;
 }
 
 let state: State | undefined;
@@ -511,6 +512,24 @@ function render(): void {
 
   root.append(renderToolbar());
 
+  if (state.manualEdits) {
+    const banner = element("div", "banner");
+    banner.setAttribute("role", "status");
+    banner.append(
+      element("span", "banner-icon", "\u26a0"),
+      element(
+        "span",
+        undefined,
+        "This file has been edited since the merge. Applying replaces the whole " +
+          "file with the result below, discarding those edits.",
+      ),
+    );
+    const open = element("button", undefined, "Open as text");
+    open.addEventListener("click", () => post({ type: "openTextEditor" }));
+    banner.append(open);
+    root.append(banner);
+  }
+
   const tree = element("div", "tree");
   tree.setAttribute("role", "tree");
   if (state.doc.format === "lockfile") {
@@ -658,6 +677,7 @@ window.addEventListener("message", (event: MessageEvent<HostMessage>) => {
         current: conflictLeaves(message.doc.root)[0]?.id,
         preview: state?.preview ?? "",
         applied: false,
+        manualEdits: message.manualEdits ?? false,
       };
       render();
       return;

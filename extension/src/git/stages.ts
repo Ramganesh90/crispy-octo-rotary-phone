@@ -8,6 +8,9 @@
  */
 
 import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -102,6 +105,82 @@ export async function readConflictStages(
     );
   }
   return { base, ours, theirs };
+}
+
+/**
+ * The conflicted content git itself writes for these three stages.
+ *
+ * Used to tell whether the working-tree file has been edited by hand since
+ * the merge: if it differs from this, someone has been resolving it manually
+ * and applying a structural result would throw that work away.
+ */
+async function conflictedText(
+  repoRoot: string,
+  stages: ConflictStages,
+): Promise<string | undefined> {
+  const dir = await mkdtemp(join(tmpdir(), "smr-mergefile-"));
+  try {
+    const paths = {
+      base: join(dir, "base"),
+      ours: join(dir, "ours"),
+      theirs: join(dir, "theirs"),
+    };
+    await Promise.all([
+      writeFile(paths.base, stages.base ?? "", "utf8"),
+      writeFile(paths.ours, stages.ours, "utf8"),
+      writeFile(paths.theirs, stages.theirs, "utf8"),
+    ]);
+
+    // `git merge-file` exits with the number of conflicts, so a non-zero
+    // status is the normal case and the output is what matters. A failure to
+    // run at all also rejects, but with a non-numeric code (ENOENT) — and it
+    // still carries an empty `stdout`, which must not be mistaken for a
+    // genuinely empty merge result.
+    const { stdout } = await exec(
+      "git",
+      ["merge-file", "-p", paths.ours, paths.base, paths.theirs],
+      { cwd: repoRoot, maxBuffer: MAX_BLOB_BYTES * 4 },
+    ).catch((error: { stdout?: unknown; code?: unknown }) =>
+      typeof error.code === "number" &&
+      error.code >= 0 &&
+      typeof error.stdout === "string" &&
+      error.stdout.length > 0
+        ? { stdout: error.stdout }
+        : { stdout: undefined },
+    );
+    return stdout;
+  } catch {
+    return undefined;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Marker lines carry branch labels that differ between invocations, so
+ * compare the content with the labels stripped.
+ */
+function normalizeMarkers(text: string): string {
+  return text
+    .replace(/^([<>|=]{7})[^\n]*$/gm, "$1")
+    .replace(/\r\n/g, "\n")
+    .trimEnd();
+}
+
+/**
+ * True when the file on disk is not what git left there — someone has edited
+ * it since the merge stopped.
+ */
+export async function hasManualEdits(
+  repoRoot: string,
+  workingTreeText: string,
+  stages: ConflictStages,
+): Promise<boolean> {
+  const expected = await conflictedText(repoRoot, stages);
+  if (expected === undefined) {
+    return false; // cannot tell; do not cry wolf
+  }
+  return normalizeMarkers(expected) !== normalizeMarkers(workingTreeText);
 }
 
 /** Stages the path, which is how git records a conflict as resolved. */

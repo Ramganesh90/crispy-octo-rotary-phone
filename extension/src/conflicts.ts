@@ -6,7 +6,11 @@
 import * as vscode from "vscode";
 
 import { findRepositories, type Repository } from "./git/repo";
-import { listConflictedPaths, readConflictStages } from "./git/stages";
+import {
+  type ConflictStages,
+  listConflictedPaths,
+  readConflictStages,
+} from "./git/stages";
 import { createEngine, detectFormat } from "./merge/index";
 import {
   type MergeDocument,
@@ -46,7 +50,7 @@ export async function analyze(
   repo: Repository,
   path: string,
   format: MergeFormat,
-): Promise<{ engine: MergeEngine; doc: MergeDocument }> {
+): Promise<{ engine: MergeEngine; doc: MergeDocument; stages: ConflictStages }> {
   const stages = await readConflictStages(repo.root, path);
   const size = stages.ours.length + stages.theirs.length;
   if (size > MAX_ANALYZE_BYTES) {
@@ -56,7 +60,7 @@ export async function analyze(
   }
   const engine = createEngine(format);
   const doc = engine.analyze(stages.base, stages.ours, stages.theirs);
-  return { engine, doc };
+  return { engine, doc, stages };
 }
 
 async function classify(repo: Repository, path: string): Promise<ConflictFile> {

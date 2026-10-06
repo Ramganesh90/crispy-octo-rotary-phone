@@ -11,7 +11,7 @@ import { promisify } from "node:util";
 import * as vscode from "vscode";
 
 import { analyze, conflictForUri } from "../conflicts";
-import { stageResolved } from "../git/stages";
+import { hasManualEdits, stageResolved } from "../git/stages";
 import { regenerateCommand } from "../merge/lockfile";
 import {
   countConflicts,
@@ -29,6 +29,8 @@ interface Session {
   doc: MergeDocument;
   repoRoot: string;
   relativePath: string;
+  /** The working-tree file was edited by hand after the merge stopped. */
+  manualEdits: boolean;
 }
 
 export class ConflictEditorProvider implements vscode.CustomTextEditorProvider {
@@ -77,18 +79,32 @@ export class ConflictEditorProvider implements vscode.CustomTextEditorProvider {
       }
 
       try {
-        const { engine, doc } = await analyze(
+        const { engine, doc, stages } = await analyze(
           conflict.repo,
           conflict.path,
           conflict.format,
+        );
+        // Applying replaces the whole file, so warn before that silently
+        // discards work someone did by hand on the conflict markers.
+        const manualEdits = await hasManualEdits(
+          conflict.repo.root,
+          document.getText(),
+          stages,
         );
         session = {
           engine,
           doc,
           repoRoot: conflict.repo.root,
           relativePath: conflict.path,
+          manualEdits,
         };
-        post({ type: "loaded", path: conflict.path, format: conflict.format, doc });
+        post({
+          type: "loaded",
+          path: conflict.path,
+          format: conflict.format,
+          doc,
+          manualEdits,
+        });
         post({ type: "preview", text: engine.serialize(doc) });
       } catch (error) {
         post({
@@ -121,6 +137,27 @@ export class ConflictEditorProvider implements vscode.CustomTextEditorProvider {
           `${session.doc.unresolvedCount} conflict(s) still need a decision.`,
         );
         return;
+      }
+
+      if (session.manualEdits) {
+        const choice = await vscode.window.showWarningMessage(
+          `${session.relativePath} has been edited since the merge.`,
+          {
+            modal: true,
+            detail:
+              "Applying replaces the whole file with the result built here, " +
+              "discarding those edits. Undo will bring them back.",
+          },
+          "Replace my edits",
+          "Open as text instead",
+        );
+        if (choice === "Open as text instead") {
+          await vscode.commands.executeCommand("vscode.openWith", document.uri, "default");
+          return;
+        }
+        if (choice !== "Replace my edits") {
+          return;
+        }
       }
 
       const text = session.engine.serialize(session.doc);

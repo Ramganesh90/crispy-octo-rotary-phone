@@ -14,6 +14,8 @@ export type HostMessage =
       path: string;
       format: MergeFormat;
       doc: MergeDocument;
+      /** Set when the working-tree file has been edited since the merge. */
+      manualEdits?: boolean;
     }
   | { type: "preview"; text: string }
   | { type: "counts"; conflictCount: number; unresolvedCount: number }

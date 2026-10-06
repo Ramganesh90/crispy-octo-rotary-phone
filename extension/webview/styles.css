@@ -400,3 +400,25 @@ kbd {
   padding: 1px 6px;
   font-weight: normal;
 }
+
+/* ---------- warning banner ---------- */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--vscode-inputValidation-warningBackground, rgba(226, 160, 63, 0.15));
+  border-bottom: 1px solid var(--vscode-inputValidation-warningBorder, var(--conflict));
+  color: var(--vscode-inputValidation-warningForeground, inherit);
+}
+
+.banner-icon {
+  flex: none;
+  color: var(--conflict);
+}
+
+.banner button {
+  margin-left: auto;
+  flex: none;
+}

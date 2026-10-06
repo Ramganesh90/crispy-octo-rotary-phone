@@ -269,6 +269,22 @@ check(
 );
 await page.close();
 
+// ---------------------------------------------------- hand-edited file warning
+
+console.log("hand-edited file:");
+page = await browser.newPage({ viewport: { width: 1000, height: 430 } });
+await page.goto(`file://${join(here, "preview.html")}?fixture=json&manualEdits=1`);
+await page.waitForSelector(".banner");
+check(
+  "a hand-edited file is called out before anything is lost",
+  ((await page.textContent(".banner")) ?? "").includes("edited since the merge"),
+);
+check(
+  "the banner offers the text editor as the way out",
+  (await page.locator(".banner button").count()) === 1,
+);
+await page.close();
+
 await browser.close();
 
 console.log(

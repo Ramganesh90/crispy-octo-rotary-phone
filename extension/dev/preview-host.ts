@@ -166,7 +166,7 @@ function pushState(): void {
           node.resolution = { kind: "side", side: message.side };
         }
       }
-      send({ type: "loaded", path: fixture.path, format: doc.format, doc });
+      send({ type: "loaded", path: fixture.path, format: doc.format, doc, manualEdits });
       pushState();
       break;
     }
@@ -178,5 +178,8 @@ function pushState(): void {
   }
 };
 
-send({ type: "loaded", path: fixture.path, format: doc.format, doc });
+/** `?manualEdits=1` previews the warning shown for a hand-edited file. */
+const manualEdits = new URLSearchParams(location.search).get("manualEdits") === "1";
+
+send({ type: "loaded", path: fixture.path, format: doc.format, doc, manualEdits });
 send({ type: "preview", text: engine.serialize(doc) });
