@@ -6,6 +6,7 @@ import { createLinesEngine } from "./lines";
 import { createLockfileEngine } from "./lockfile";
 import { createTomlEngine } from "./toml";
 import type { MergeEngine, MergeFormat } from "./types";
+import { createXmlEngine } from "./xml";
 import { createYamlEngine } from "./yaml";
 
 const LOCKFILES = new Set(["package-lock.json", "npm-shrinkwrap.json"]);
@@ -58,6 +59,14 @@ export function detectFormat(path: string): MergeFormat | null {
   if (lower.endsWith(".toml")) {
     return "toml";
   }
+  if (
+    lower.endsWith(".xml") ||
+    lower.endsWith(".csproj") ||
+    lower.endsWith(".props") ||
+    lower.endsWith(".targets")
+  ) {
+    return "xml";
+  }
   // .env, .env.local, .env.production — but not .env.example's siblings being
   // treated differently, since they all have the same shape.
   if (name === ".env" || name.startsWith(".env.")) {
@@ -81,6 +90,8 @@ export function createEngine(format: MergeFormat): MergeEngine {
       return createDotenvEngine();
     case "toml":
       return createTomlEngine();
+    case "xml":
+      return createXmlEngine();
   }
 }
 

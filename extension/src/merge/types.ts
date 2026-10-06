@@ -14,7 +14,8 @@ export type MergeFormat =
   | "lines"
   | "lockfile"
   | "dotenv"
-  | "toml";
+  | "toml"
+  | "xml";
 
 /**
  * How a node ended up with its value.

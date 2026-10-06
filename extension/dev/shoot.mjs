@@ -10,7 +10,30 @@ import { mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { chromium } from "playwright";
+/**
+ * Playwright is a development-only tool and may be installed globally rather
+ * than in this package, so resolve it either way instead of assuming.
+ */
+async function loadPlaywright() {
+  const candidates = [
+    "playwright",
+    "/opt/node-tools/node_modules/playwright/index.js",
+  ];
+  for (const candidate of candidates) {
+    try {
+      const loaded = await import(candidate);
+      // A CommonJS build arrives wrapped in `default`.
+      return loaded.chromium ? loaded : loaded.default;
+    } catch {
+      // try the next one
+    }
+  }
+  throw new Error(
+    "playwright not found. Install it with `npm install --no-save playwright`.",
+  );
+}
+
+const { chromium } = await loadPlaywright();
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = resolve(process.argv[2] ?? join(here, "..", "..", "docs", "images"));
