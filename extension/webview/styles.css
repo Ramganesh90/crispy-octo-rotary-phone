@@ -1,0 +1,332 @@
+/*
+ * All colors come from VS Code theme variables so the resolver matches the
+ * user's theme in light, dark and high-contrast without a palette of its own.
+ */
+
+:root {
+  --row-gap: 2px;
+  --indent: 16px;
+  --conflict: var(--vscode-gitDecoration-conflictingResourceForeground, #e2a03f);
+  --added: var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+  --muted: var(--vscode-descriptionForeground);
+  --border: var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+#root.loading,
+.message {
+  padding: 24px;
+  color: var(--muted);
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--vscode-editorWidget-background, inherit);
+}
+
+.toolbar .path {
+  font-weight: 600;
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.85em;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.badge.warn {
+  background: var(--conflict);
+  color: var(--vscode-editor-background);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+  background: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+}
+
+button.primary {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:focus-visible,
+.row:focus-visible,
+input:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ---------- tree ---------- */
+
+.tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 12px;
+  min-height: 22px;
+}
+
+.row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.row.current {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.row.container {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.row .twisty {
+  width: 12px;
+  color: var(--muted);
+  flex: none;
+}
+
+.row .key {
+  flex: none;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.row.conflict .key {
+  color: var(--conflict);
+}
+
+.row.conflict .marker {
+  color: var(--conflict);
+  flex: none;
+}
+
+/*
+ * On the selection background the theme's own foreground is the only colour
+ * guaranteed to have contrast, so selected rows drop their accent colours.
+ */
+.row.current .key,
+.row.current .marker,
+.row.current .state,
+.row.current .value {
+  color: inherit;
+}
+
+.row .state {
+  color: var(--muted);
+  font-size: 0.9em;
+  margin-left: auto;
+  flex: none;
+}
+
+.row .state.added {
+  color: var(--added);
+}
+
+.row .value {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- choices ---------- */
+
+.choices {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  max-width: 320px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+}
+
+.choice .side {
+  color: var(--muted);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: none;
+}
+
+.choice .val {
+  font-family: var(--vscode-editor-font-family);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choice[aria-pressed="true"] {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.choice[aria-pressed="true"] .side {
+  color: inherit;
+}
+
+.choice.absent .val {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.custom-editor {
+  display: flex;
+  gap: 6px;
+  padding: 4px 12px 8px calc(12px + var(--indent));
+}
+
+.custom-editor input {
+  flex: 1;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--border));
+  padding: 3px 6px;
+}
+
+/* ---------- preview ---------- */
+
+.preview {
+  flex: 0 0 auto;
+  max-height: 34vh;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+
+.preview h2 {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.preview pre {
+  margin: 0;
+  padding: 0 12px 12px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size);
+  line-height: 1.45;
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* ---------- footer ---------- */
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--vscode-editorWidget-background, inherit);
+}
+
+.footer .status {
+  margin-right: auto;
+  color: var(--muted);
+}
+
+.footer .status.warn {
+  color: var(--conflict);
+}
+
+.hint {
+  padding: 6px 12px;
+  color: var(--muted);
+  font-size: 0.9em;
+  border-top: 1px solid var(--border);
+}
+
+kbd {
+  font-family: var(--vscode-editor-font-family);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.9em;
+}

@@ -30,12 +30,28 @@ const webviewConfig = {
   logLevel: "info",
 };
 
+/**
+ * Development-only harness host: runs the real engine in a browser so the
+ * resolver UI can be previewed and screenshotted without launching VS Code.
+ * Excluded from the published package by .vscodeignore.
+ */
+const previewConfig = {
+  ...webviewConfig,
+  entryPoints: ["dev/preview-host.ts"],
+  outfile: "dist/preview-host.js",
+  minify: false,
+};
+
+const configs = production
+  ? [extensionConfig, webviewConfig]
+  : [extensionConfig, webviewConfig, previewConfig];
+
 if (watch) {
-  for (const config of [extensionConfig, webviewConfig]) {
+  for (const config of configs) {
     const ctx = await context(config);
     await ctx.watch();
   }
   console.log("watching...");
 } else {
-  await Promise.all([build(extensionConfig), build(webviewConfig)]);
+  await Promise.all(configs.map(build));
 }

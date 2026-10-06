@@ -1,0 +1,127 @@
+/**
+ * Simulates the extension host for the development harness.
+ *
+ * It runs the *real* merge engine in the browser and implements the same
+ * message protocol as `ConflictEditorProvider`, so the harness exercises the
+ * genuine engine-to-UI round trip rather than a mock.
+ */
+
+import { createJsonEngine } from "../src/merge/json";
+import { createLinesEngine } from "../src/merge/lines";
+import { countConflicts, type MergeNode, walk } from "../src/merge/types";
+import type { HostMessage, WebviewMessage } from "../src/ui/messages";
+
+const FIXTURES = {
+  json: {
+    path: "package.json",
+    base: JSON.stringify(
+      {
+        name: "acme-web",
+        version: "2.3.0",
+        scripts: { build: "vite build", test: "vitest" },
+        dependencies: { react: "18.0.0", lodash: "4.17.0", zustand: "4.4.0" },
+        engines: { node: ">=18" },
+      },
+      null,
+      2,
+    ) + "\n",
+    ours:
+      JSON.stringify(
+        {
+          name: "acme-web",
+          version: "2.4.0",
+          scripts: { build: "vite build", test: "vitest", lint: "eslint ." },
+          dependencies: { react: "18.2.0", lodash: "4.17.0", vite: "5.0.0" },
+          engines: { node: ">=18" },
+        },
+        null,
+        2,
+      ) + "\n",
+    theirs:
+      JSON.stringify(
+        {
+          name: "acme-web",
+          version: "3.0.0",
+          scripts: { build: "vite build --mode prod", test: "vitest" },
+          dependencies: { react: "19.0.0", lodash: "4.17.21", zod: "3.22.0" },
+          engines: { node: ">=20" },
+        },
+        null,
+        2,
+      ) + "\n",
+  },
+  lines: {
+    path: ".gitignore",
+    base: "node_modules/\n*.log\n",
+    ours: "node_modules/\n*.log\ndist/\ncoverage/\n",
+    theirs: "node_modules/\n.next/\n*.log.bak\n",
+  },
+} as const;
+
+type FixtureName = keyof typeof FIXTURES;
+
+const which = (new URLSearchParams(location.search).get("fixture") ??
+  "json") as FixtureName;
+const fixture = FIXTURES[which] ?? FIXTURES.json;
+const engine = which === "lines" ? createLinesEngine() : createJsonEngine();
+
+const doc = engine.analyze(fixture.base, fixture.ours, fixture.theirs);
+
+function send(message: HostMessage): void {
+  window.postMessage(message, "*");
+}
+
+function findNode(id: string): MergeNode | undefined {
+  for (const node of walk(doc.root)) {
+    if (node.id === id) {
+      return node;
+    }
+  }
+  return undefined;
+}
+
+function pushState(): void {
+  Object.assign(doc, countConflicts(doc.root));
+  send({
+    type: "counts",
+    conflictCount: doc.conflictCount,
+    unresolvedCount: doc.unresolvedCount,
+  });
+  send({ type: "preview", text: engine.serialize(doc) });
+}
+
+// The webview posts to this hook (installed by preview.html).
+(window as unknown as { __onMessage?: (m: WebviewMessage) => void }).__onMessage = (
+  message,
+) => {
+  switch (message.type) {
+    case "ready":
+      break;
+    case "setResolution": {
+      const node = findNode(message.nodeId);
+      if (node) {
+        node.resolution = message.resolution;
+      }
+      pushState();
+      break;
+    }
+    case "setAll": {
+      for (const node of walk(doc.root)) {
+        if (!node.children && node.status === "conflict") {
+          node.resolution = { kind: "side", side: message.side };
+        }
+      }
+      send({ type: "loaded", path: fixture.path, format: doc.format, doc });
+      pushState();
+      break;
+    }
+    case "apply":
+      send({ type: "applied", staged: message.stage });
+      break;
+    case "openTextEditor":
+      break;
+  }
+};
+
+send({ type: "loaded", path: fixture.path, format: doc.format, doc });
+send({ type: "preview", text: engine.serialize(doc) });

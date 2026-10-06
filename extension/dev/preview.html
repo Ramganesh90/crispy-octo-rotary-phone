@@ -1,0 +1,89 @@
+<!doctype html>
+<!--
+  Development harness: runs the real webview bundle outside VS Code.
+
+  It stubs `acquireVsCodeApi` and replays the host protocol from a fixture, so
+  the resolver can be inspected and screenshotted without launching an editor.
+  The theme variables below are VS Code's Dark+ and Light+ values, which is
+  what makes this a fair check that the UI themes correctly.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Resolver preview</title>
+    <link rel="stylesheet" href="../dist/webview.css" />
+    <style>
+      :root,
+      body[data-theme="dark"] {
+        --vscode-font-family: -apple-system, "Segoe UI", Ubuntu, sans-serif;
+        --vscode-font-size: 13px;
+        --vscode-editor-font-family: "SF Mono", Menlo, Consolas, monospace;
+        --vscode-editor-font-size: 12px;
+        --vscode-foreground: #cccccc;
+        --vscode-descriptionForeground: #9d9d9d;
+        --vscode-editor-background: #1f1f1f;
+        --vscode-editorWidget-background: #252526;
+        --vscode-panel-border: #2b2b2b;
+        --vscode-focusBorder: #0078d4;
+        --vscode-badge-background: #4d4d4d;
+        --vscode-badge-foreground: #ffffff;
+        --vscode-button-background: #0078d4;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-hoverBackground: #026ec1;
+        --vscode-button-secondaryBackground: #313131;
+        --vscode-button-secondaryForeground: #cccccc;
+        --vscode-button-secondaryHoverBackground: #3c3c3c;
+        --vscode-input-background: #313131;
+        --vscode-input-foreground: #cccccc;
+        --vscode-input-border: #3c3c3c;
+        --vscode-list-hoverBackground: #2a2d2e;
+        --vscode-list-activeSelectionBackground: #04395e;
+        --vscode-list-activeSelectionForeground: #ffffff;
+        --vscode-gitDecoration-conflictingResourceForeground: #e4676b;
+        --vscode-gitDecoration-addedResourceForeground: #81b88b;
+      }
+
+      body[data-theme="light"] {
+        --vscode-foreground: #3b3b3b;
+        --vscode-descriptionForeground: #767676;
+        --vscode-editor-background: #ffffff;
+        --vscode-editorWidget-background: #f8f8f8;
+        --vscode-panel-border: #e5e5e5;
+        --vscode-focusBorder: #005fb8;
+        --vscode-badge-background: #cccccc;
+        --vscode-badge-foreground: #3b3b3b;
+        --vscode-button-background: #005fb8;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-hoverBackground: #0258a8;
+        --vscode-button-secondaryBackground: #e5e5e5;
+        --vscode-button-secondaryForeground: #3b3b3b;
+        --vscode-button-secondaryHoverBackground: #cccccc;
+        --vscode-input-background: #ffffff;
+        --vscode-input-foreground: #3b3b3b;
+        --vscode-input-border: #cecece;
+        --vscode-list-hoverBackground: #f2f2f2;
+        --vscode-list-activeSelectionBackground: #005fb8;
+        --vscode-list-activeSelectionForeground: #ffffff;
+        --vscode-gitDecoration-conflictingResourceForeground: #ad0707;
+        --vscode-gitDecoration-addedResourceForeground: #388a34;
+      }
+    </style>
+  </head>
+  <body data-theme="dark">
+    <div id="root" class="loading">Loading conflict…</div>
+    <script>
+      // Messages the harness sends back to the page, recorded for assertions.
+      window.__sent = [];
+      window.acquireVsCodeApi = () => ({
+        postMessage: (message) => {
+          window.__sent.push(message);
+          window.__onMessage?.(message);
+        },
+        getState: () => undefined,
+        setState: () => undefined,
+      });
+    </script>
+    <script src="../dist/webview.js"></script>
+    <script src="../dist/preview-host.js"></script>
+  </body>
+</html>
